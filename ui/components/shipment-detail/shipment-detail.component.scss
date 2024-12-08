@@ -1,0 +1,50 @@
+::ng-deep {
+    .net-price {
+        font-size: 11px;
+        color: var(--color-text-300);
+        line-height: 14px;
+    }
+    .pointer {
+        cursor: pointer;
+    }
+    .price-qualifier {
+        font-size: 11px;
+        margin-left: 2px;
+        margin-top: 0;
+        text-transform: lowercase;
+    }
+    .line-promotion {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 12px;
+        .promotion-amount {
+            margin-inline-start: 12px;
+        }
+    }
+    .form-grid > vdr-labeled-data {
+        margin-bottom: 0; // gap takes care of it
+    }
+    .bold {
+        font-weight: 800;
+    }
+    .table.fulfillment-items {
+        th {
+            text-align: left;
+            &:last-of-type {
+                padding-inline-end: calc(var(--surface-margin-left) / 2);
+            }
+        }
+        td {
+            vertical-align: middle;
+            text-align: left;
+            &:last-of-type {
+                border-image: unset !important;
+                padding-inline-end: calc(var(--surface-margin-left) / 2);
+            }
+        }
+        tr.order-discount td {
+            font-weight: 600;
+            line-height: 3;
+        }
+    }
+}

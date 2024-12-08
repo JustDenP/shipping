@@ -1,0 +1,17 @@
+img.carrier-logo {
+    width: 30px;
+    height: auto;
+}
+
+tr.undone td {
+    text-decoration: line-through !important;
+    opacity: 0.5 !important;
+}
+tr td {
+    vertical-align: middle !important;
+}
+
+.btn-undo {
+    border-radius: 3px;
+    padding: 0 6px;
+}

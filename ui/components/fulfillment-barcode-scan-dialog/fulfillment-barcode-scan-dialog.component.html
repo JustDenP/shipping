@@ -1,0 +1,68 @@
+<ng-template vdrDialogTitle>{{ 'fulfillment.barcode-scan-dialog.title' | translate:{ count: results.length }
+  }}</ng-template>
+<vdr-card [paddingX]="false">
+  <form class="form" class="mx-2">
+    <vdr-form-field [label]="'fulfillment.barcode-scan-dialog.input-label' | translate" for="barcodeInputValue">
+      <input type="text"
+        id="barcodeInputValue"
+        name="barcodeInputValue"
+        [(ngModel)]="barcodeInputValue"
+        (keydown.enter)="barcodeScanned()"
+        #barcodeInput
+      />
+    </vdr-form-field>
+  </form>
+  <table class="table" *ngIf="results.length">
+    <thead>
+      <tr>
+        <th>{{ 'carrier.service' | translate }}</th>
+        <th>{{ 'customer.customer' | translate }}</th>
+        <th>{{ 'order.order' | translate }}</th>
+        <th>{{ 'fulfillment.label-scanned-at' | translate }}</th>
+        <th>{{ 'common.status' | translate }}</th>
+        <th>{{ 'fulfillment.barcode-scan-dialog.label-undo' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-template ngFor let-result [ngForOf]="results">
+        <tr [class.undone]="result.status === 'undone'">
+          <td>
+            <img *ngIf="carrierLogoUrl(result.fulfillment) as url"
+              class="carrier-logo"
+              alt="{{ result.fulfillment.customFields.serviceCode }}"
+              [src]="url"
+            />
+            {{ result.fulfillment.customFields.serviceName }}
+          </td>
+          <td>
+            <vdr-customer-label [customer]="result.fulfillment.orders[0]?.customer"
+              (click)="$event.stopPropagation()"></vdr-customer-label>
+          </td>
+          <td>
+            <a *ngFor="let order of result.fulfillment.orders" class="button-ghost" [routerLink]="['/orders', order.id]"
+              target="_blank">
+              {{ order.code }}
+              <clr-icon shape="arrow right"></clr-icon>
+            </a>
+          </td>
+          <td>
+            {{ result.fulfillment.customFields.labelScannedAt | date : 'mediumTime' }}
+          </td>
+          <td>
+            {{ ('fulfillment.barcode-scan-dialog.status-' + result.status) | translate }}
+          </td>
+          <td>
+            <button *ngIf="result.status !== 'undone'" type="button" class="btn btn-danger btn-undo" (click)="undoScan(result)">
+              {{ 'fulfillment.barcode-scan-dialog.btn-undo' | translate }}
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+    </tbody>
+  </table>
+  <div *ngFor="let failure of failures" class="alert mx-2 mt-2" [class]="'alert-' + failure.type">{{ failure.msg }}</div>
+</vdr-card>
+
+<ng-template vdrDialogButtons>
+  <button type="button" class="btn" (click)="close()" [disabled]="progressBar?.active">{{ 'common.close' | translate }}</button>
+</ng-template>

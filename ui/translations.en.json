@@ -1,0 +1,87 @@
+{
+  "carrier": {
+    "carrier": "Carrier",
+    "service": "Service"
+  },
+  "common": {
+    "close": "Close"
+  },
+  "fulfillment": {
+    "at-a-glance": "Quick View",
+    "destination": "Destination",
+    "fulfillment": "Shipment",
+    "easy-post-shipment-id": "EasyPost Shipment ID",
+    "easy-post-tracker-id": "EasyPost Tracker ID",
+    "commercial-invoice-submitted-electronically": "Commercial Invoice Submitted Electronically?",
+    "label-scanned-at": "Label scanned at",
+    "items": "Items",
+    "num-items": "# Items",
+    "shipping-paid": "Shipping Paid By Us",
+    "rate-not-selected": "TBD",
+    "rate-not-purchased": "not purchased yet",
+    "barcode-scan-dialog": {
+      "btn-open-dialog": "Scan Shipments for Pickup",
+      "input-label": "Tracking Code",
+      "title": "Scan Shipments for Pickup ({ count } scanned)",
+      "status-added-to-pickup": "Added to Pickup",
+      "status-scanned": "Scan date saved",
+      "status-undone": "Undone",
+      "label-undo": "Undo?",
+      "btn-undo": "Undo"
+    },
+    "rate-select-dialog": {
+      "title": "Select Rate"
+    }
+  },
+  "order": {
+    "subtotal": "Subtotal",
+    "errors": "Errors",
+    "selected": "Orders selected",
+    "pick-list": "Pick List",
+    "no-orders-selected": "Select one or more orders to evaluate if we can ship them",
+    "notes": "Notes",
+    "error-no-shipping-method": "No shipping method selected",
+    "error-not-all-orders-selected": "All orders from the combined shipment must be selected",
+    "sales-tax": "Sales Tax",
+    "requested": "Requested",
+    "available": "Available",
+    "quantity-needed": "Needed: { count }",
+    "quantity-on-hand": "On Hand: { count }",
+    "selected-shipping-method": "Selected Shipping Method",
+    "used-shipping-method": "Used Shipping Method",
+    "search-by-shippable-order-filters": "Search by name / email / code / transaction ID",
+    "shipping-collected": "Shipping Collected",
+    "prepare-orders-to-ship": {
+      "title": "Prepare Orders to Ship"
+    },
+    "fast-fulfill-dialog": {
+      "title": "Fast Fulfill {count} Orders",
+      "btn-prepare-shipping": "Prepare Shipments",
+      "btn-purchase-shipping": "Purchase Labels ({cost})",
+      "btn-print-commercial-invoices": "Print Commercial Invoices",
+      "btn-print-labels": "Print Labels",
+      "btn-print-pick-list": "Print Pick List",
+      "cost-difference-free-shipping": "(Free)",
+      "prepare-shipping": "Prepare Shipment",
+      "purchase-shipping": "Purchase Labels",
+      "review-cost": "Review Cost"
+    }
+  },
+  "pickup": {
+    "pickup": "Pickup",
+    "num-fulfillments": "# Shipments",
+    "easy-post-pickup-id": "EasyPost Pickup ID",
+    "easy-post-batch-id": "EasyPost Batch ID",
+    "easy-post-scan-form-id": "EasyPost Scan Form ID",
+    "pickup-window-start": "Pickup Window Start",
+    "pickup-window-end": "Pickup Window End",
+    "pickup-cost": "Pickup Cost"
+  },
+  "state": {
+    "closed": "Closed",
+    "on-hold": "On Hold",
+    "open": "Open",
+    "purchased": "Purchased",
+    "tendered": "Tendered"
+  }
+}

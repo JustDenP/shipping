@@ -1,0 +1,115 @@
+<ng-template vdrDialogTitle>{{ 'order.fast-fulfill-dialog.title' | translate:{ count: orders.length } }}</ng-template>
+<vdr-card [paddingX]="false">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>{{ 'order.order' | translate }}</th>
+        <th>{{ 'order.fast-fulfill-dialog.prepare-shipping' | translate }}</th>
+        <th>{{ 'order.fast-fulfill-dialog.review-cost' | translate }}</th>
+        <th>{{ 'order.fast-fulfill-dialog.purchase-shipping' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-template ngFor let-order [ngForOf]="displayOrders">
+        <tr [class.has-error]="!!orderStatus[order.code].error">
+          <td>
+            <a class="button-ghost" [routerLink]="['/orders', order.id]" target="_blank">
+              {{ order.code }}
+              <clr-icon shape="arrow right"></clr-icon>
+            </a>
+            <div *ngFor="let o of order.extraOrders">
+            <a class="button-ghost" [routerLink]="['/orders', o.id]" target="_blank">
+              {{ o.code }}
+              <clr-icon shape="arrow right"></clr-icon>
+            </a>
+            </div>
+          </td>
+          <td *ngIf="orderStatus[order.code].shipment as shipment">
+            <span *ngIf="orderStatus[order.code].processing && step === 'prepare' ; else prepareStatus" class="spinner spinner-inline"></span>
+            <ng-template #prepareStatus>
+              <clr-icon shape="circle" *ngIf="!shipment.id && !orderStatus[order.code].error"></clr-icon>
+              <clr-icon shape="success-standard" class="is-success" *ngIf="shipment.id"></clr-icon>
+              <clr-icon shape="error-standard" class="is-error" *ngIf="!shipment.id && orderStatus[order.code].error"></clr-icon>
+            </ng-template>
+          </td>
+          <td *ngIf="costAnalysis(order) as analysis ; else noShipment"
+            [class.is-error]="analysis.difference > 0 && !analysis.freeShipping"
+            [class.is-success]="analysis.difference < 0 && !analysis.freeShipping"
+          >
+            {{ analysis.cost | localeCurrency : order.currencyCode }}
+            <span *ngIf="analysis.difference && !analysis.freeShipping">({{analysis.difference > 0 ? '+' : ''}}{{ analysis.difference | localeCurrency : order.currencyCode}})</span>
+            <span *ngIf="analysis.difference && analysis.freeShipping">{{ 'order.fast-fulfill-dialog.cost-difference-free-shipping' | translate }}</span>
+          </td>
+          <ng-template #noShipment>
+            <td>-</td>
+          </ng-template>
+          <td *ngIf="orderStatus[order.code].shipment as shipment">
+            <span *ngIf="orderStatus[order.code].processing && step === 'purchase' ; else purchaseStatus" class="spinner spinner-inline"></span>
+            <ng-template #purchaseStatus>
+              <clr-icon shape="circle" *ngIf="!shipment.purchasedAt"></clr-icon>
+              <clr-icon shape="success-standard" class="is-success" *ngIf="shipment.purchasedAt"></clr-icon>
+              <clr-icon shape="error-standard" class="is-error" *ngIf="shipment.id && orderStatus[order.code].error"></clr-icon>
+            </ng-template>
+            <div class="mt-1" *ngIf="shipment.commInvoiceUrl">
+              <a href="{{ shipment.commInvoiceUrl }}" class="btn btn-sm" target="_blank">Print Commercial Invoice</a>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="orderStatus[order.code].error as error" class="error-msg">
+          <td colspan="4">
+            <clr-alert clrAlertType="danger" [clrAlertClosable]="false">
+              {{ error }}
+            </clr-alert>
+          </td>
+        </tr>
+      </ng-template>
+    </tbody>
+  </table>
+</vdr-card>
+
+<ng-template vdrDialogButtons>
+  <div class="progress-bar-container" *ngIf="progressBar">
+    <div class="progress-bar">
+      <div class="progress-segment success" [style.width.%]="progressBar.successPct"></div>
+      <div class="progress-segment error" [style.width.%]="progressBar.errorPct"></div>
+    </div>
+    <div class="progress-bar-message">{{ progressBar.message }}</div>
+  </div>
+  <button type="button"
+    *ngIf="step === 'prepare'"
+    class="btn btn-primary"
+    (click)="prepareShipments()"
+    [disabled]="progressBar?.active"
+  >
+    {{ 'order.fast-fulfill-dialog.btn-prepare-shipping' | translate }}
+    <span *ngIf="progressBar?.active" class="ml-1 spinner spinner-inline"></span>
+  </button>
+  <button type="button"
+    *ngIf="step === 'purchase'"
+    class="btn btn-primary"
+    (click)="purchaseShipments()"
+    [disabled]="progressBar?.active"
+  >
+    {{ 'order.fast-fulfill-dialog.btn-purchase-shipping' | translate : { cost: (totalCost | localeCurrency : 'USD') } }}
+    <span *ngIf="progressBar?.active" class="ml-1 spinner spinner-inline"></span>
+  </button>
+  <button type="button"
+    *ngIf="step === 'print'"
+    class="btn btn-primary"
+    (click)="printLabels()"
+  >
+    {{ 'order.fast-fulfill-dialog.btn-print-labels' | translate }}
+  </button>
+  <button type="button"
+    *ngIf="step === 'print'"
+    class="btn btn-primary"
+    (click)="printPickList()"
+  >
+    {{ 'order.fast-fulfill-dialog.btn-print-pick-list' | translate }}
+  </button>
+  <button type="button"
+    class="btn"
+    (click)="close()"
+    [disabled]="progressBar?.active"
+  >{{ 'common.close' | translate }}</button>
+</ng-template>

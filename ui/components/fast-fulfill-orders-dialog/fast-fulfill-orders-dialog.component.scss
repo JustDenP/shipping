@@ -1,0 +1,71 @@
+.is-error {
+    color: var(--cds-alias-status-danger)
+}
+.is-success {
+    color: var(--cds-alias-status-success)
+}
+
+.progress-bar-container {
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+    flex-grow: 1;
+    justify-content: space-around;
+}
+.progress-bar {
+    display: flex;
+    height: 6px;
+    background-color: var(--cds-alias-status-neutral-tint);
+    border-radius: 10px;
+    overflow: hidden;
+
+    background-image: repeating-linear-gradient(
+        135deg,
+        var(--cds-alias-status-neutral-tint) 0px,
+        var(--cds-alias-status-neutral-tint) 8px,
+        var(--cds-alias-status-disabled-tint) 8px,
+        var(--cds-alias-status-disabled-tint) 15px
+      );
+    background-size: 22px 22px;
+    animation: stripeMove 1s linear infinite;
+}
+@keyframes stripeMove {
+    0% { background-position: 0 0; }
+    100% { background-position: -22px 0; }
+}
+
+.progress-segment {
+    height: 100%;
+    transition: width 0.5s;
+}
+
+.progress-segment.success {
+    background-color: var(--cds-alias-status-success);
+    border-radius: 10px 0 0 10px;
+}
+
+.progress-segment.error {
+    background-color: var(--cds-alias-status-danger);
+    border-radius: 0 10px 10px 0;
+}
+
+::ng-deep {
+    .card-container { padding-bottom: 0 !important; }
+    .table tbody:last-child tr:last-child td { border-bottom: 0; }
+    td .spinner.spinner-inline {
+        margin: 0;
+        --clr-spinner-small-size: var(--cds-global-space-7);
+    }
+    tr.has-error {
+        &:hover { background-color: unset !important; }
+        td {
+            text-decoration: line-through;
+            border-bottom: 0;
+            opacity: 0.4;
+        }
+    }
+    tr.error-msg {
+        &:hover { background-color: unset !important; }
+        td { padding-top: 0; }
+    }
+}

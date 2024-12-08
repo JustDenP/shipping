@@ -1,0 +1,18 @@
+::ng-deep {
+    .table.pickup-fulfillments {
+        th {
+            text-align: left;
+            &:last-of-type {
+                padding-inline-end: calc(var(--surface-margin-left) / 2);
+            }
+        }
+        td {
+            vertical-align: middle;
+            text-align: left;
+            &:last-of-type {
+                border-image: unset !important;
+                padding-inline-end: calc(var(--surface-margin-left) / 2);
+            }
+        }
+    }
+}

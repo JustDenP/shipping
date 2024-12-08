@@ -1,0 +1,256 @@
+<vdr-page-block>
+  <vdr-action-bar>
+    <vdr-ab-right>
+      <vdr-action-bar-items locationId="shippable-order-list"/>
+      <div cds-layout="horizontal align:vertical-center" cds-text="h4 medium" style="line-height: 1;">
+        <label for="toggleSidebar" class="pr-1" style="cursor: pointer;">Show shipping panel</label>
+        <input type="checkbox" id="toggleSidebar" clrToggle [checked]="showSidebar" (change)="toggleSidebar()" />
+      </div>
+      <vdr-action-bar-dropdown-menu locationId="shippable-order-list"/>
+    </vdr-ab-right>
+  </vdr-action-bar>
+</vdr-page-block>
+
+<vdr-page-detail-layout [ngClass]="{hideSidebar: !(showSidebar$ | async)}">
+  <vdr-page-detail-sidebar [hidden]="!showSidebar">
+
+    <vdr-card *ngIf="orderCheckResult$ | async as results">
+      <h3 cds-text="h3 bold" class="mb-3">{{ 'order.prepare-orders-to-ship.title' | translate }}</h3>
+      <!-- No Results Message -->
+      <div cds-text="h4 regular" class="mb-1" *ngIf="!results.orderCount ; else resultContainer">
+        {{ 'order.no-orders-selected' | translate }}
+      </div>
+
+      <ng-template #resultContainer>
+        <div cds-layout="horizontal align:vertical-center" class="mb-3">
+          <h4 cds-text="h4 bold" class="font-medium">{{ 'order.selected' | translate }}: {{results.orderCount}}</h4>
+          <button class="btn btn-primary"
+            cds-layout="align:right"
+            (click)="fulfillOrders()"
+            [disabled]="results.errors.length"
+          >Fulfill Orders</button>
+        </div>
+        <div class="mb-4">
+          <!-- Error List -->
+          <div *ngIf="results.errors.length" cds-layout="horizontal align:vertical-center" class="mb-1">
+            <h4 cds-text="h4 bold" class="flex">{{ 'order.errors' | translate }} ({{results.errors.length}})</h4>
+            <button class="button-ghost" cds-layout="align:right" *ngIf="results.insufficientStock" (click)="removeUnfillableOrders(results)">remove unfillable</button>
+          </div>
+          <div class="alert" *ngFor="let error of results.errors; first as first"
+            [class.alert-danger]="error.type !== 'no-shipping-method'"
+            [class.alert-warning]="error.type === 'no-shipping-method'"
+            [class.mt-2]="!first"
+          >
+            <div cds-layout="horizontal" class="justify-between mb-1">
+              <a class="button-ghost" [routerLink]="['/orders', error.id]" target="_blank">
+                {{ error.code }}
+                <clr-icon shape="arrow right"></clr-icon>
+              </a>
+              <button cds-layout="align:right" class="button-ghost" (click)="removeOrderSelection(error.id)">
+                remove order
+              </button>
+            </div>
+            <div>
+              <span *ngIf="error.type === 'no-shipping-method'">
+                {{ 'order.error-no-shipping-method' | translate }}
+                <button class="button-ghost" (click)="selectShippingMethod(error.id)">
+                  select rate
+                </button>
+              </span>
+              <div *ngIf="error.type === 'insufficient-stock'" class="text-sm">
+                <div *ngFor="let line of error.lines">
+                  {{ line.sku }}: {{ 'order.requested' | translate }} {{ line.requested }},
+                  {{ 'order.available' | translate }} {{ line.available }}
+                </div>
+              </div>
+              <div *ngIf="error.type === 'not-all-orders-selected'" class="text-sm">
+                {{ 'order.error-not-all-orders-selected' | translate }}
+              </div>
+            </div>
+          </div>
+          <!-- Notes List -->
+          <div class="alert order-notes" *ngFor="let order of (selectedOrderNotes$ | async)"
+            [class.mt-2]="!!results.errors.length"
+          >
+            <div cds-layout="vertical gap:xs" class="mb-1">
+              <a class="button-ghost" [routerLink]="['/orders', order.id]" target="_blank">
+                {{ order.code }}
+                <clr-icon shape="arrow right"></clr-icon>
+              </a>
+              <vdr-customer-label
+                [customer]="order.customer"
+                (click)="$event.stopPropagation()"
+              ></vdr-customer-label>
+            </div>
+            <div *ngIf="order.customFields.customerNotes" class="text-sm">
+              <strong>Customer notes:</strong>
+              {{ order.customFields.customerNotes }}
+            </div>
+            <div *ngIf="order.customFields.fulfillmentNotes" class="text-sm">
+              <strong>Fulfillment notes:</strong>
+              {{ order.customFields.fulfillmentNotes }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Pick List -->
+        <div *ngIf="results.pickList.length">
+          <h4 cds-text="h4 bold" class="flex mb-1">{{ 'order.pick-list' | translate }} ({{results.pickList.length}})</h4>
+          <div class="card" *ngFor="let item of results.pickList; last as last" [class.mb-2]="!last" [class.insufficient-stock-alert]="item.quantityNeeded > item.onHand">
+            <div cds-layout="horizontal gap:xs align:vertical-center" class="p-1">
+              <div class="image-placeholder">
+                <img *ngIf="(productInfo$ | async)?.[item.sku]?.featuredAsset as asset; else imagePlaceholder"
+                  [src]="asset | assetPreview : 'tiny'" />
+                <ng-template #imagePlaceholder>
+                  <div class="placeholder">
+                    <clr-icon shape="image" size="48"></clr-icon>
+                  </div>
+                </ng-template>
+              </div>
+              <div>
+                <div cds-text="p3">{{ item.sku }}</div>
+                <div cds-text="p3 bold" class="quantity-needed">
+                  {{ 'order.quantity-needed' | translate:{ count: item.quantityUsed } }}
+                  <span *ngIf="item.quantityUsed > item.quantityNeeded" class="text-danger">
+                    ({{ item.quantityNeeded }})
+                  </span>
+                  / {{ item.totalAllocated }}
+                </div>
+                <div cds-text="p3">
+                  {{ 'order.quantity-on-hand' | translate:{ count: item.onHand } }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </vdr-card>
+  </vdr-page-detail-sidebar>
+  <vdr-data-table-2
+    class="mt-2"
+    id="shippable-order-list"
+    [items]="items$ | async"
+    [itemsPerPage]="itemsPerPage$ | async"
+    [totalItems]="totalItems$ | async"
+    [currentPage]="currentPage$ | async"
+    [filters]="filters"
+    (pageChange)="setPageNumber($event)"
+    (itemsPerPageChange)="setItemsPerPage($event)"
+    (visibleColumnsChange)="setVisibleColumns($event)"
+  >
+    <vdr-bulk-action-menu
+      locationId="shippable-order-list"
+      [hostComponent]="this"
+      [selectionManager]="selectionManager"
+    ></vdr-bulk-action-menu>
+    <vdr-dt2-search
+      [searchTermControl]="searchTermControl"
+      [searchTermPlaceholder]="'order.search-by-shippable-order-filters' | translate"
+    />
+    <vdr-dt2-column [heading]="'common.id' | translate" id="id" [hiddenByDefault]="true" [sort]="sorts.get('id')">
+      <ng-template let-order="item">
+        {{ order.id }}
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'common.created-at' | translate" id="created-at" [hiddenByDefault]="true">
+      <ng-template let-order="item">
+        {{ order.createdAt | localeDate : 'short' }}
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'common.code' | translate" id="code" [optional]="false">
+      <ng-template let-order="item">
+        <div cds-layout="vertical align:right" [class.combined-shipping]="!!combinedOrders[order.id]" [class.multi-customer]="customerOrderCount[order.customer?.id] > 1">
+          <a class="button-ghost" [routerLink]="['/orders', order.id]"
+            ><span>{{ order.code }}</span>
+            <clr-icon shape="arrow right"></clr-icon>
+          </a>
+          <vdr-customer-label
+            [customer]="order.customer"
+            (click)="$event.stopPropagation()"
+          ></vdr-customer-label>
+          <div cds-text="p4" *ngIf="getCombinedFulfillment(order)" class="mt-1 combined-status">
+            Combined
+          </div>
+        </div>
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'order.notes' | translate" id="customer" [sort]="sorts.get('customerLastName')">
+      <ng-template let-order="item">
+        <clr-tooltip *ngIf="order.customFields.customerNotes ; else noCustomerNotes">
+          <clr-icon clrTooltipTrigger shape="user" class="is-solid" size="18"></clr-icon>
+          <clr-tooltip-content clrPosition="top-right" clrSize="md" *clrIfOpen>
+              {{ order.customFields.customerNotes }}
+          </clr-tooltip-content>
+        </clr-tooltip>
+        <clr-tooltip *ngIf="order.customFields.deliveryInstructions ; else noDeliveryInstructions">
+          <clr-icon clrTooltipTrigger shape="truck" class="is-solid" size="22"></clr-icon>
+          <clr-tooltip-content clrPosition="top-right" clrSize="md" *clrIfOpen>
+              {{ order.customFields.deliveryInstructions }}
+          </clr-tooltip-content>
+        </clr-tooltip>
+        <clr-tooltip *ngIf="order.customFields.fulfillmentNotes ; else noFulfillmentNotes">
+          <clr-icon clrTooltipTrigger shape="warning-standard" class="is-solid" size="18" style="cursor: pointer" (click)="editFulfillmentNotes(order)"></clr-icon>
+          <clr-tooltip-content clrPosition="top-right" clrSize="md" *clrIfOpen>
+              {{ order.customFields.fulfillmentNotes }}
+          </clr-tooltip-content>
+        </clr-tooltip>
+        <clr-tooltip *ngIf="order.history.items.length ; else noHistoryNotes">
+          <clr-icon clrTooltipTrigger shape="list" class="is-solid" size="18"></clr-icon>
+          <clr-tooltip-content clrPosition="top-right" clrSize="lg" *clrIfOpen>
+            <div *ngFor="let note of order.history.items" class="text-small">
+              <clr-icon shape="envelope" *ngIf="note.isPublic" size="14"></clr-icon>
+              <clr-icon shape="eye-hide" *ngIf="!note.isPublic" size="14"></clr-icon>
+              {{ note.data.note }} ({{note.administrator?.firstName}} {{note.administrator?.lastName}}, {{ note.createdAt | timeAgo }})
+            </div>
+          </clr-tooltip-content>
+        </clr-tooltip>
+        <ng-template #noCustomerNotes><clr-icon shape="user" size="18"></clr-icon></ng-template>
+        <ng-template #noDeliveryInstructions><clr-icon shape="truck" size="22"></clr-icon></ng-template>
+        <ng-template #noFulfillmentNotes><clr-icon shape="warning-standard" size="18" style="cursor: pointer" (click)="editFulfillmentNotes(order)"></clr-icon></ng-template>
+        <ng-template #noHistoryNotes><clr-icon shape="list" size="18"></clr-icon></ng-template>
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'order.order-type' | translate" id="order-type" [hiddenByDefault]="true">
+      <ng-template let-order="item">
+        <vdr-chip *ngIf="order.type === OrderType.Regular">{{ 'order.order-type-regular' | translate }}</vdr-chip>
+        <vdr-chip *ngIf="order.type === OrderType.Aggregate">{{ 'order.order-type-aggregate' | translate }}</vdr-chip>
+        <vdr-chip *ngIf="order.type === OrderType.Seller">{{ 'order.order-type-seller' | translate }}</vdr-chip>
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'order.state' | translate" id="state" [sort]="sorts.get('state')">
+      <ng-template let-order="item">
+        <vdr-order-state-label [state]="order.state"></vdr-order-state-label>
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'order.total' | translate" id="total" [sort]="sorts.get('totalWithTax')">
+      <ng-template let-order="item">
+        {{ order.totalWithTax | localeCurrency : order.currencyCode }}
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'common.updated-at' | translate" id="updated-at">
+      <ng-template let-order="item">
+        {{ order.updatedAt | timeAgo }}
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'order.placed-at' | translate" id="placed-at" [sort]="sorts.get('orderPlacedAt')">
+      <ng-template let-order="item">
+        {{ formatDate(order.orderPlacedAt) }}
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column [heading]="'order.shipping-method' | translate" id="shipping">
+      <ng-template let-order="item">
+        <div cds-layout="vertical">
+          {{ getShippingMethod(order) }}
+          <button class="button-ghost" (click)="selectShippingMethod(order)">
+            select rate
+          </button>
+        </div>
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-custom-field-column
+      *ngFor="let customField of customFields"
+      [customField]="customField"
+      [sorts]="sorts"
+    />
+  </vdr-data-table-2>
+</vdr-page-detail-layout>

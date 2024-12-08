@@ -1,0 +1,33 @@
+<ng-template vdrDialogTitle>{{ 'fulfillment.rate-select-dialog.title' | translate }}</ng-template>
+<vdr-card *ngIf="availableServices$ | async as services ; else loading" [paddingX]="false">
+  <vdr-data-table-2 id="services" [items]="services">
+    <vdr-dt2-column id="carrier" heading="Carrier">
+      <ng-template let-item="item">{{ item.name }}</ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column id="service" heading="Service">
+      <ng-template let-item="item">{{ item.service.serviceName }}</ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column id="cost" heading="Cost">
+      <ng-template let-item="item">
+        {{ (item.service.shipmentCost) * 100 | localeCurrency : item.service.currency }}
+        <span *ngIf="item.service.insuranceCost as insuranceCost" class="is-warning ml-1" cds-text="bold">
+          (+{{ insuranceCost * 100 | localeCurrency : item.service.currency }})
+        </span>
+      </ng-template>
+    </vdr-dt2-column>
+    <vdr-dt2-column id="cost" heading="">
+      <ng-template let-item="item">
+        <button class="button-ghost" (click)="resolveWith(item)">
+          Select
+        </button>
+      </ng-template>
+    </vdr-dt2-column>
+  </vdr-data-table-2>
+</vdr-card>
+<ng-template #loading>
+  Loading...
+</ng-template>
+
+<ng-template vdrDialogButtons>
+  <button type="button" class="btn" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+</ng-template>

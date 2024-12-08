@@ -1,0 +1,124 @@
+<vdr-page-block>
+  <vdr-action-bar>
+    <vdr-ab-left></vdr-ab-left>
+    <vdr-ab-right>
+      <div class="flex" style="gap: .5rem">
+        <button class="btn" *ngIf="pickup?.state === 'Open'" [disabled]="!hasAnySelected()" (click)="removeSelected()">{{ "Remove Shipments" | translate }}</button>
+        <button class="btn btn-primary" *ngIf="pickup?.state === 'Open'" [disabled]="!pickup?.fulfillments.length" (click)="closePickup()">{{ "Done Adding Shipments" | translate }}</button>
+        <a class="btn btn-primary" *ngIf="pickup?.scanFormUrl" [href]="pickup.scanFormUrl" target="_blank">{{ "Print Scan Form" | translate }}</a>
+      </div>
+      <vdr-action-bar-items locationId="pickup-detail"></vdr-action-bar-items>
+      <vdr-action-bar-dropdown-menu
+        locationId="pickup-detail"
+      ></vdr-action-bar-dropdown-menu>
+    </vdr-ab-right>
+  </vdr-action-bar>
+</vdr-page-block>
+
+<vdr-page-detail-layout *ngIf="pickup">
+  <vdr-page-detail-sidebar>
+    <vdr-card [title]="'fulfillment.at-a-glance' | translate">
+      <div class="form-grid" style="gap: .75rem;">
+        <vdr-order-state-label [state]="pickup.state" style="line-height: 0;"></vdr-order-state-label>
+        <vdr-labeled-data [label]="'carrier.carrier' | translate">
+          {{ pickup.carrier }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'pickup.num-fulfillments' | translate">
+          {{ pickup.fulfillments.length }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'pickup.easy-post-batch-id' | translate">
+          {{ pickup.easyPostBatchId }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'pickup.easy-post-scan-form-id' | translate">
+          {{ pickup.easyPostScanFormId }}
+        </vdr-labeled-data>
+        <div *ngIf="pickup.easyPostPickupId ; else schedulePickupForm">
+          <vdr-labeled-data [label]="'pickup.easy-post-pickup-id' | translate">
+            {{ pickup.easyPostPickupId }}
+          </vdr-labeled-data>
+          <vdr-labeled-data [label]="'pickup.pickup-window-start' | translate">
+            {{ pickup.pickupWindowStart | date:'medium' }}
+          </vdr-labeled-data>
+          <vdr-labeled-data [label]="'pickup.pickup-window-end' | translate">
+            {{ pickup.pickupWindowEnd | date:'medium' }}
+          </vdr-labeled-data>
+          <vdr-labeled-data [label]="'pickup.pickup-cost' | translate">
+            {{ pickup.pickupCost | localeCurrency:'USD' }}
+          </vdr-labeled-data>
+        </div>
+        <ng-template #schedulePickupForm>
+          <div *ngIf="pickup.state === 'Closed'" cds-layout="vertical gap:md">
+            <vdr-form-field [label]="'pickup.pickup-window-start' | translate">
+              <vdr-datetime-picker
+                [(ngModel)]="pickupWindowStart"
+                [min]="now"
+                [max]="oneWeek"
+                [timeGranularityInterval]="30"
+              ></vdr-datetime-picker>
+            </vdr-form-field>
+            <vdr-form-field [label]="'pickup.pickup-window-end' | translate">
+              <vdr-datetime-picker
+                [(ngModel)]="pickupWindowEnd"
+                [min]="now"
+                [max]="oneWeek"
+                [timeGranularityInterval]="30"
+              ></vdr-datetime-picker>
+            </vdr-form-field>
+            <button class="btn btn-primary" [disabled]="!(pickupWindowStart && pickupWindowEnd)" (click)="schedulePickup()">Schedule Pickup</button>
+          </div>
+        </ng-template>
+      </div>
+    </vdr-card>
+  </vdr-page-detail-sidebar>
+
+  <vdr-page-block *ngIf="pickup">
+    <vdr-card [paddingX]="false">
+      <table class="table pickup-fulfillments">
+        <thead>
+          <tr>
+            <th *ngIf="pickup.state === 'Open'">
+              <input type="checkbox" [checked]="areAllSelected()" (click)="toggleSelectAll()" />
+            </th>
+            <th>{{ 'fulfillment.fulfillment' | translate }}</th>
+            <th>{{ 'order.tracking-code' | translate }}</th>
+            <th>{{ 'fulfillment.destination' | translate }}</th>
+            <th>{{ 'carrier.service' | translate }}</th>
+            <th>{{ 'fulfillment.num-items' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let fulfillment of pickup.fulfillments">
+            <td *ngIf="pickup.state === 'Open'">
+              <input type="checkbox" [checked]="!!selectedItems.get(fulfillment.id)" (click)="toggleSelect(fulfillment.id)" />
+            </td>
+            <td>
+              <a class="button-ghost" [routerLink]="['/extensions/easy-post/shipments', fulfillment.id]">
+                {{ fulfillment.customFields.invoiceId }}
+                <clr-icon shape="arrow right"></clr-icon>
+              </a>
+            </td>
+            <td>
+              {{ fulfillment.trackingCode }}
+            </td>
+            <td>
+              <span *ngIf="fulfillment.orders[0]?.shippingAddress as address">
+                <span *ngIf="address.countryCode === 'US'; else foreign">
+                  {{ address.city }}, {{ address.province }}
+                </span>
+                <ng-template #foreign>
+                  <clr-icon shape="world" class="mr-1"></clr-icon>{{ address.country }}
+                </ng-template>
+              </span>
+            </td>
+            <td>
+              {{ fulfillment.customFields.serviceName }}
+            </td>
+            <td>
+              {{ countItems(fulfillment) }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </vdr-card>
+  </vdr-page-block>
+</vdr-page-detail-layout>

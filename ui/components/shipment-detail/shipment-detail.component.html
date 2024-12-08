@@ -1,0 +1,240 @@
+<vdr-page-block>
+  <vdr-action-bar>
+    <vdr-ab-left></vdr-ab-left>
+    <vdr-ab-right>
+      <div class="flex" style="gap: .5rem">
+        <a class="btn" *ngIf="fulfillment?.easypostPickup?.state === 'Open'" (click)="removeFromPickup()">{{ "Remove from Pickup" | translate }}</a>
+        <a class="btn" *ngIf="!fulfillment?.customFields.ratePurchasedAt" (click)="openSelectRateDialog()">{{ "Update Shipping Method" | translate }}</a>
+        <a class="btn btn-primary" *ngIf="fulfillment?.state === 'Created'" (click)="transitionToState('Pending')">{{ "Mark Pending" | translate }}</a>
+        <a class="btn btn-primary" *ngIf="fulfillment?.state === 'Pending'" (click)="transitionToState('Purchased')">{{ "Purchase" | translate }}</a>
+        <a class="btn btn-primary" *ngIf="fulfillment?.customFields.ratePurchasedAt" (click)="printLabel()">{{ "Print Label" | translate }}</a>
+        <a class="btn btn-primary" *ngIf="fulfillment?.customFields.commInvoiceUrl" (click)="printCommercialInvoice()">{{ "Print Commercial Invoice" | translate }}</a>
+      </div>
+      <vdr-action-bar-items locationId="shipment-detail"></vdr-action-bar-items>
+      <vdr-action-bar-dropdown-menu
+        locationId="shipment-detail"
+      ></vdr-action-bar-dropdown-menu>
+    </vdr-ab-right>
+  </vdr-action-bar>
+</vdr-page-block>
+
+<vdr-page-detail-layout *ngIf="fulfillment">
+  <vdr-page-detail-sidebar>
+    <vdr-card [title]="'fulfillment.at-a-glance' | translate">
+      <div class="form-grid" style="gap: .75rem;">
+        <vdr-page-entity-info [entity]="fulfillment"/>
+        <vdr-order-state-label *ngIf="fulfillment?.state" [state]="fulfillment.state" style="line-height: 0;"></vdr-order-state-label>
+        <vdr-labeled-data [label]="'order.shipping-method' | translate">
+          {{ fulfillment.customFields.serviceName }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'order.tracking-code' | translate">
+          {{ fulfillment.trackingCode || '-' }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'fulfillment.label-scanned-at' | translate">
+          {{ fulfillment.customFields.labelScannedAt || '-' }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'fulfillment.commercial-invoice-submitted-electronically' | translate" *ngIf="fulfillment.customFields.commInvoiceUrl">
+          {{ fulfillment.customFields.commInvoiceFiled ? 'Yes' : 'No' }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'fulfillment.easy-post-shipment-id' | translate" *ngIf="fulfillment.customFields.shipmentId as id">
+          {{ id }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'fulfillment.easy-post-tracker-id' | translate" *ngIf="fulfillment.customFields.trackerId as id">
+          {{ id }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'fulfillment.shipping-paid' | translate">
+          <div *ngIf="fulfillment.customFields.rateCost ; else rateNotSelected">
+            <span [ngClass]="{ bold: fulfillment.customFields.rateCost !== getShippingCollected() }">
+              {{ fulfillment.customFields.rateCost | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+            </span>
+            <span *ngIf="!fulfillment.customFields.ratePurchasedAt" class="price-qualifier">
+              {{ 'fulfillment.rate-not-purchased' | translate }}
+            </span>
+          </div>
+          <ng-template #rateNotSelected>
+            <span class="price-qualifier">{{ "fulfillment.rate-not-selected" | translate }}</span>
+          </ng-template>
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'order.subtotal' | translate">
+          {{ getSubtotal() | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'order.sales-tax' | translate">
+          {{ getTotalTax() | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'order.shipping-collected' | translate">
+          {{ getShippingCollected() | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'order.order' | translate">
+          <a *ngFor="let order of fulfillment.orders" class="button-ghost" [routerLink]="['/orders', order.id]">
+            {{ order.code }}
+            <clr-icon shape="arrow right"></clr-icon>
+          </a>
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'pickup.pickup' | translate" *ngIf="fulfillment.easypostPickup as pickup">
+          <a class="button-ghost" [routerLink]="['/extensions/easy-post/pickups', pickup.id]">
+            {{ pickup.state }}
+            <clr-icon shape="arrow right"></clr-icon>
+          </a>
+        </vdr-labeled-data>
+        <vdr-labeled-data [label]="'customer.customer' | translate">
+          <vdr-customer-label [customer]="fulfillment.orders[0]?.customer"></vdr-customer-label>
+        </vdr-labeled-data>
+      </div>
+    </vdr-card>
+  </vdr-page-detail-sidebar>
+
+  <vdr-page-block *ngIf="fulfillment">
+    <vdr-card [paddingX]="false">
+      <table class="table fulfillment-items">
+        <thead>
+          <tr>
+            <th>{{ 'common.image' | translate }}</th>
+            <th>{{ 'order.product-name' | translate }}</th>
+            <th>{{ 'order.product-sku' | translate }}</th>
+            <th>{{ 'order.unit-price' | translate }}</th>
+            <th>{{ 'order.quantity' | translate }}</th>
+            <th>{{ 'order.total' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of fulfillment.lines">
+            <td>
+              <div class="image-placeholder">
+                <img
+                  *ngIf="item.orderLine.productVariant?.featuredAsset as asset; else productAsset"
+                  [src]="asset | assetPreview : 'tiny'"
+                />
+                <ng-template #productAsset>
+                  <img
+                    *ngIf="item.orderLine.productVariant?.product?.featuredAsset as asset; else imagePlaceholder"
+                    [src]="asset | assetPreview : 'tiny'"
+                  />
+                  <ng-template #imagePlaceholder>
+                    <div class="placeholder">
+                      <clr-icon shape="image" size="48"></clr-icon>
+                    </div>
+                  </ng-template>
+                </ng-template>
+              </div>
+            </td>
+            <td>
+              {{ item.orderLine.productVariant.name }}
+            </td>
+            <td>
+              {{ item.orderLine.productVariant.sku }}
+            </td>
+            <td>
+              <div class="unit-price">
+                {{ item.orderLine.discountedUnitPrice | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+                <div *ngIf="item.orderLine.unitPrice !== item.orderLine.discountedUnitPrice" class="net-price" [title]="'order.net-price' | translate">
+                  {{ item.orderLine.unitPrice | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+                </div>
+              </div>
+            </td>
+            <td>
+              <div>{{ item.orderLine.quantity }}</div>
+            </td>
+            <td>
+              <div class="flex">
+                <div class="unit-price">
+                  {{ item.orderLine.discountedLinePrice | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+                  <div *ngIf="item.orderLine.linePrice !== item.orderLine.discountedLinePrice" class="net-price" [title]="'order.net-price' | translate">
+                    {{ item.orderLine.linePrice | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+                  </div>
+                </div>
+                <ng-container *ngIf="getLineDiscounts(item.orderLine) as discounts">
+                  <vdr-dropdown *ngIf="discounts.length">
+                    <div class="price-qualifier pointer" vdrDropdownTrigger>
+                      {{ 'order.promotions-applied' | translate }}
+                    </div>
+                    <vdr-dropdown-menu>
+                      <div class="line-promotion" *ngFor="let discount of discounts">
+                        <span class="promotion-name">{{ discount.description }}</span>
+                        <div class="promotion-amount">
+                          {{ discount.amount | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+                        </div>
+                      </div>
+                    </vdr-dropdown-menu>
+                  </vdr-dropdown>
+                </ng-container>
+              </div>
+            </td>
+          </tr>
+          <tr *ngFor="let discount of getOrderDiscounts()" class="order-discount">
+            <td colspan="5">
+              Order discount: {{ discount.name }}
+            </td>
+            <td>
+              {{ discount.amount | localeCurrency : fulfillment.orders[0]?.currencyCode }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </vdr-card>
+
+    <vdr-card>
+      <div class="form-grid" style="gap: 1em;">
+        <vdr-labeled-data class="mt-2" [label]="'order.shipping-address' | translate">
+          <vdr-formatted-address *ngIf="fulfillment.orders[0]?.shippingAddress as address" [address]="address" class="mt-1"></vdr-formatted-address>
+        </vdr-labeled-data>
+        <form class="form" [formGroup]="dimensionsForm">
+          <vdr-labeled-data class="mt-2" [label]="'Dimensions (L x W x H)' | translate">
+            <div cds-layout="horizontal gap:sm align:vertical-center">
+              <input
+                id="length"
+                type="text"
+                style="width: 60px; text-align: center;"
+                formControlName="length"
+              />
+              ×
+              <input
+                id="width"
+                type="text"
+                style="width: 60px; text-align: center;"
+                formControlName="width"
+              />
+              ×
+              <input
+                id="height"
+                type="text"
+                style="width: 60px; text-align: center;"
+                formControlName="height"
+              />
+            </div>
+                <!-- [readonly]="!'UpdateOrder' || !'CreateOrder'" -->
+            </vdr-labeled-data>
+            <vdr-labeled-data class="mt-2 mb-2" [label]="'Weight (oz)' | translate">
+              <input
+                id="weight"
+                type="text"
+                formControlName="weight"
+              />
+            </vdr-labeled-data>
+            <button type="button"
+              class="btn"
+              (click)="setEditDimensions()"
+              *ngIf="!dimensionsForm.enabled"
+            >
+              {{ 'common.edit' | translate }}
+            </button>
+            <button type="button"
+              class="btn"
+              *ngIf="dimensionsForm.enabled"
+              (click)="cancelEditDimensions()"
+              [disabled]="updatingDimensions"
+            >
+              {{ 'common.cancel' | translate }}
+            </button>
+            <button type="button"
+              class="btn btn-primary ml-3"
+              *ngIf="dimensionsForm.enabled"
+              (click)="updateDimensions()"
+              [disabled]="updatingDimensions"
+            >
+              {{ 'common.update' | translate }}
+            </button>
+        </form>
+      </div>
+    </vdr-card>
+  </vdr-page-block>
+</vdr-page-detail-layout>

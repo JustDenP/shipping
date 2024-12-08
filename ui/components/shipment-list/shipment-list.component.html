@@ -1,0 +1,231 @@
+<vdr-page-block>
+  <vdr-action-bar>
+    <vdr-ab-left></vdr-ab-left>
+    <vdr-ab-right style="min-height: 40px">
+      <div *ngIf="selectedFulfillments$ | async as items" cds-layout="horizontal gap:xs align:vertical-center">
+          <button *ngIf="items.length === 1 && canChangeShippingRate(items[0])"
+            class="btn"
+            (click)="openSelectRateDialog(items[0])"
+          >{{ "Update Shipping Method" | translate }}</button>
+      </div>
+      <vdr-action-bar-items locationId="shipment-list"></vdr-action-bar-items>
+      <vdr-action-bar-dropdown-menu
+        locationId="shipment-list"
+      ></vdr-action-bar-dropdown-menu>
+    </vdr-ab-right>
+  </vdr-action-bar>
+</vdr-page-block>
+
+<vdr-data-table-2
+  id="shipment-list"
+  [items]="items$ | async"
+  [itemsPerPage]="itemsPerPage$ | async"
+  [totalItems]="totalItems$ | async"
+  [currentPage]="currentPage$ | async"
+  [filters]="filters"
+  (pageChange)="setPageNumber($event)"
+  (itemsPerPageChange)="setItemsPerPage($event)"
+>
+  <vdr-bulk-action-menu
+    locationId="shipment-list"
+    [hostComponent]="this"
+    [selectionManager]="selectionManager"
+  ></vdr-bulk-action-menu>
+
+  <vdr-dt2-search
+    [searchTermControl]="searchTermControl"
+    [searchTermPlaceholder]="'Filter by ID, SKU, carrier, tracking code, or customer last name' | translate"
+  ></vdr-dt2-search>
+
+  <!-- ID Column (links to detail page) -->
+  <vdr-dt2-column id="id" [heading]="'common.id' | translate" [sort]="getCustomFieldSort('invoiceId')" [optional]="false">
+    <ng-template let-fulfillment="item">
+      <a class="button-ghost" [routerLink]="['./', fulfillment.id]">
+        {{ fulfillment.customFields.invoiceId }}
+        <clr-icon shape="arrow right"></clr-icon>
+      </a>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Linked Orders Column -->
+  <vdr-dt2-column id="orders" [heading]="'order.order' | translate" [sort]="sorts.get('orderCode')" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      <a *ngFor="let order of fulfillment.orders" class="button-ghost" [routerLink]="['/orders', order.id]">
+        {{ order.code }}
+        <clr-icon shape="arrow right"></clr-icon>
+      </a>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Customer Name Column -->
+  <vdr-dt2-column id="customerName" [heading]="'customer.customer' | translate" [sort]="sorts.get('customerLastName')">
+    <ng-template let-fulfillment="item">
+      <vdr-customer-label [customer]="fulfillment.orders[0]?.customer" (click)="$event.stopPropagation()"></vdr-customer-label>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- State Column -->
+  <vdr-dt2-column id="state" [heading]="'order.state' | translate" [sort]="sorts.get('state')">
+    <ng-template let-fulfillment="item">
+      <vdr-order-state-label [state]="fulfillment.state"></vdr-order-state-label>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Pickup Column -->
+  <vdr-dt2-column id="pickup" [heading]="'pickup.pickup' | translate">
+    <ng-template let-fulfillment="item">
+      <a *ngIf="fulfillment.easypostPickup as pickup" class="button-ghost" [routerLink]="['/extensions/easy-post/pickups', pickup.id]">
+        {{ pickup.state }}
+        <clr-icon shape="arrow right"></clr-icon>
+      </a>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Destination -->
+  <vdr-dt2-column id="destination" [heading]="'fulfillment.destination' | translate">
+    <ng-template let-item="item">
+      <span *ngIf="item.orders[0]?.shippingAddress as address">
+        <span *ngIf="address.countryCode === 'US'; else foreign">
+          {{ address.city }}, {{ address.province }}
+        </span>
+        <ng-template #foreign>
+          <clr-icon shape="world" class="mr-1"></clr-icon>{{ address.country }}
+        </ng-template>
+      </span>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Number of Items Column -->
+  <vdr-dt2-column id="numItems" [heading]="'fulfillment.num-items' | translate">
+    <ng-template let-fulfillment="item">
+      {{ getItemQuantity(fulfillment) }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Product SKUs Column -->
+  <vdr-dt2-column id="productSkus" [heading]="'fulfillment.items' | translate" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      <div class="product-skus">
+        <div *ngFor="let line of fulfillment.lines" cds-layout="vertical">
+          <div cds-layout="horizontal gap:xs align:vertical-center">
+            <span class="image-placeholder">
+              <img
+                *ngIf="line.orderLine.productVariant?.featuredAsset as asset; else productAsset"
+                [src]="asset | assetPreview : 25"
+              />
+              <ng-template #productAsset>
+                <img
+                  *ngIf="line.orderLine.productVariant?.product?.featuredAsset as asset; else imagePlaceholder"
+                  [src]="asset | assetPreview : 25"
+                />
+                <ng-template #imagePlaceholder>
+                  <div class="placeholder">
+                    <clr-icon shape="image" size="48"></clr-icon>
+                  </div>
+                </ng-template>
+              </ng-template>
+            </span>
+            <span *ngIf="line.orderLine.productVariant.sku" class="">
+              {{ line.orderLine.productVariant.sku }}
+            </span>
+            <span>
+              x {{ line.quantity }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Tracking Code Column -->
+  <vdr-dt2-column id="trackingCode" [heading]="'order.tracking-code' | translate" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.trackingCode }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Method Column (customer selected shipping method) -->
+  <vdr-dt2-column id="method" [heading]="'order.selected-shipping-method' | translate" [sort]="sorts.get('method')">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.method }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Used Shipping Method (i.e. when the customer selected free shipping, and we used USPS Ground) -->
+  <vdr-dt2-column id="serviceName" [heading]="'order.used-shipping-method' | translate" [sort]="getCustomFieldSort('serviceName')">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.customFields.serviceName }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Carrier Code Column -->
+  <vdr-dt2-column id="carrierCode" [heading]="'Carrier code' | translate" [sort]="getCustomFieldSort('carrierCode')" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.customFields.carrierCode }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Service Code Column -->
+  <vdr-dt2-column id="serviceCode" [heading]="'Service code' | translate" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.customFields.serviceCode }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Amount customer paid for shipping -->
+  <vdr-dt2-column id="shipping" [heading]="'Shipping collected' | translate" [hiddenByDefault]="true">
+    <ng-template let-item="item">
+      {{ getShippingCollected(item) / 100 | currency }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Amount we paid for shipping -->
+  <vdr-dt2-column id="rateCost" [heading]="'Shipping cost' | translate">
+    <ng-template let-item="item">
+      <span *ngIf="item.customFields.rateCost">
+        {{ item.customFields?.rateCost / 100 | currency }}
+        <span *ngIf="!item.customFields.ratePurchasedAt" class="price-qualifier">
+          {{ 'fulfillment.rate-not-purchased' | translate }}
+        </span>
+      </span>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- When we paid for shipping -->
+  <vdr-dt2-column id="rateCost" [heading]="'Printed at' | translate" [sort]="getCustomFieldSort('ratePurchasedAt')">
+    <ng-template let-item="item">
+      <span *ngIf="item.customFields.ratePurchasedAt as purchasedAt" >
+        {{ formatDate(purchasedAt) }}
+      </span>
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Created At Column -->
+  <vdr-dt2-column id="createdAt" [heading]="'common.created-at' | translate" [sort]="sorts.get('createdAt')" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.createdAt | date:'medium' }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Updated At Column -->
+  <vdr-dt2-column id="updatedAt" [heading]="'common.updated-at' | translate" [sort]="sorts.get('updatedAt')" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.updatedAt | date:'medium' }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Weight Column -->
+  <vdr-dt2-column id="weight" [heading]="'Weight (oz)' | translate" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ formatWeight(fulfillment) }}
+    </ng-template>
+  </vdr-dt2-column>
+
+  <!-- Dimensions Column -->
+  <vdr-dt2-column id="dimensions" [heading]="'Dimensions (L x W x H)' | translate" [hiddenByDefault]="true">
+    <ng-template let-fulfillment="item">
+      {{ fulfillment.customFields.length }} x {{ fulfillment.customFields.width }} x {{ fulfillment.customFields.height }}
+    </ng-template>
+  </vdr-dt2-column>
+
+</vdr-data-table-2>

@@ -1,0 +1,17 @@
+<ng-template vdrDialogTitle>Update {{ label }}</ng-template>
+<form class="form">
+  <vdr-form-field [label]="label" for="value">
+    <input type="text"
+      id="value"
+      name="value"
+      [(ngModel)]="value"
+      (keydown.enter)="resolveWith(value)"
+      #input
+    />
+  </vdr-form-field>
+</form>
+
+<ng-template vdrDialogButtons>
+  <button type="button" class="btn" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <button type="button" class="btn btn-primary" (click)="resolveWith(value)">{{ 'common.update' | translate }}</button>
+</ng-template>
